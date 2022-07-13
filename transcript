@@ -1,0 +1,31 @@
+#include <vector>
+#include <functional>
+
+namespace transcript {
+    template <class T>
+    using Sequence = const std::vector<T>;
+
+    template <class T>
+    using Pred = std::function<bool(T)>;
+
+    template <class T>
+    using AssociatedFunction = std::function<void(Sequence<T>)>;
+
+    template <class T>
+    class Pattern{
+        static std::vector<Pattern<T>> all;
+        std::vector<Pred<T>> preds;
+        AssociatedFunction<T> assoc;
+    public:
+        constexpr Pattern(std::vector<Pred<T>>& preds, AssociatedFunction<T>& assoc)
+        : preds(preds), assoc(assoc)
+        {
+            all.push_back(*this);
+        }
+
+        void operator()(Sequence<T> seq)
+        {
+            assoc(seq)
+        }
+    };
+}
