@@ -1,4 +1,5 @@
 - Might have to replace impl of template std::function of the form std::funtion<T, E>, with the form std::funtion<T(E)> 
+- Have to replace static class member Pattern::all with global template variable all_Patterns<T>
 - Have to add
     - addPattern function OR use the constructor instead
     - addSynonym function
