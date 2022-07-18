@@ -1,6 +1,8 @@
-- Might have to replace impl of template std::function of the form std::funtion<T, E>, with the form std::funtion<T(E)> 
-- Have to replace static class member Pattern::all with global template variable all_Patterns<T>
 - Have to add
-    - addPattern function OR use the constructor instead
     - addSynonym function
-    - match and translate functions
+    - scan and translate functions
+- Replace the type of LangSpec::patterns with std::set
+    - To do so, I have to
+    - Replace all calls to push_back with calls to insert
+    - Make a class for comparison so it can be used as the argument the template argument Compare instead of std::less<Key>, as this function calls Key::operator<() and that function overload is missing for the std::function class
+        - Make an overload as in the example in https://en.cppreference.com/w/cpp/container/set/set
