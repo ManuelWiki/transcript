@@ -1,31 +1,54 @@
 #include <vector>
 #include <functional>
 
-namespace transcript {
-    template <class T>
-    using Sequence = const std::vector<T>;
+template <class T>
+using Sequence = const std::vector<T>;
 
-    template <class T>
-    using Pred = std::function<bool(T)>;
+template <class T>
+using Pred = std::function<bool(T)>;
 
-    template <class T>
-    using AssociatedFunction = std::function<void(Sequence<T>)>;
+template <class T>
+using AssociatedFunction = std::function<void(Sequence<T>)>;
 
-    template <class T>
-    class Pattern{
-        static std::vector<Pattern<T>> all;
+template <class T>
+class Pattern{
+    std::vector<Pred<T>> preds;
+    AssociatedFunction<T> assoc;
+public:
+    constexpr Pattern(std::vector<Pred<T>> preds, AssociatedFunction<T> assoc)
+    : preds(preds), assoc(assoc)
+    {
+        
+    }
+
+    void operator()(Sequence<T> seq)
+    {
+        assoc(seq);
+    }
+};
+
+template <class T>
+class LangSpec{
+    std::vector<Pattern<T>> patterns;
+public:
+    LangSpec() : patterns() {};
+
+    void addPattern(std::vector<Pred<T>> preds, AssociatedFunction<T> assoc)
+    {
+        patterns.push_back(Pattern(preds, assoc));
+    }
+    void addPattern(std::vector<T> values, AssociatedFunction<T> assoc)
+    {
         std::vector<Pred<T>> preds;
-        AssociatedFunction<T> assoc;
-    public:
-        constexpr Pattern(std::vector<Pred<T>>& preds, AssociatedFunction<T>& assoc)
-        : preds(preds), assoc(assoc)
+        for (auto v : values)
         {
-            all.push_back(*this);
+            preds.push_back([&](T a){ return a == v; });
         }
+        patterns.push_back(Pattern(preds, assoc));
+    }
 
-        void operator()(Sequence<T> seq)
-        {
-            assoc(seq)
-        }
-    };
-}
+    void scan(Sequence<T> src)
+    {
+        
+    }
+};
