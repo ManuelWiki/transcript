@@ -1,54 +1,50 @@
+#include <utility>
 #include <vector>
 #include <functional>
 
-template <class T>
-using Sequence = const std::vector<T>;
-
-template <class T>
-using Pred = std::function<bool(T)>;
-
-template <class T>
-using AssociatedFunction = std::function<void(Sequence<T>)>;
-
-template <class T>
-class Pattern{
-    std::vector<Pred<T>> preds;
-    AssociatedFunction<T> assoc;
+template<class T>
+class Predicate{
+    std::function<bool(T)> eval;
 public:
-    constexpr Pattern(std::vector<Pred<T>> preds, AssociatedFunction<T> assoc)
-    : preds(preds), assoc(assoc)
-    {
-        
-    }
+    constexpr Predicate(std::function<bool(T)> e)
+    : eval(e)
+    {}
 
-    void operator()(Sequence<T> seq)
-    {
-        assoc(seq);
-    }
+    constexpr Predicate(T v)
+    : eval([&](T a){ return a == v; })
+    {}
 };
 
-template <class T>
-class LangSpec{
-    std::vector<Pattern<T>> patterns;
+template<class T>
+constexpr Predicate<T> N(std::function<bool(T)> e, unsigned n = 1)
+{
+    return Predicate<T>(e);
+}
+
+template<class T>
+constexpr Predicate<T> N(T v, unsigned n = 1)
+{
+    return Predicate<T>(v);
+}
+
+template <class T, class Target>
+class Grammar{
+    using AssocFunction = std::function<Target(T)>;
+
+    std::vector<std::vector<Predicate<T> > > patterns;
+    std::vector<AssocFunction> assoc;
 public:
-    LangSpec() : patterns() {};
-
-    void addPattern(std::vector<Pred<T>> preds, AssociatedFunction<T> assoc)
+    constexpr Grammar(std::vector<std::pair<std::vector<Predicate<T>>, AssocFunction>> patts)
     {
-        patterns.push_back(Pattern(preds, assoc));
-    }
-    void addPattern(std::vector<T> values, AssociatedFunction<T> assoc)
-    {
-        std::vector<Pred<T>> preds;
-        for (auto v : values)
+        for (auto [vp, a] : patts)
         {
-            preds.push_back([&](T a){ return a == v; });
+            patterns.push_back(vp);
+            assoc.push_back(a);
         }
-        patterns.push_back(Pattern(preds, assoc));
     }
 
-    void scan(Sequence<T> src)
+    unsigned countPatterns()
     {
-        
+        return patterns.size();
     }
 };

@@ -1,8 +1,1 @@
-- Have to add
-    - addSynonym function
-    - scan and translate functions
-- Replace the type of LangSpec::patterns with std::set
-    - To do so, I have to
-    - Replace all calls to push_back with calls to insert
-    - Make a class for comparison so it can be used as the argument the template argument Compare instead of std::less<Key>, as this function calls Key::operator<() and that function overload is missing for the std::function class
-        - Make an overload as in the example in https://en.cppreference.com/w/cpp/container/set/set
+- add predicate types and members N and M to Predicate class
