@@ -36,6 +36,17 @@ struct PatternBuilder {
 };
 
 template <class T>
+PredicateBuilder<T> group(T only);
+template <class T>
+PatternBuilder<T> group(PatternBuilder<T> only);
+template <class T>
+PredicateBuilder<T> group(PredicateBuilder<T> only);
+template <class T, class... Args>
+PatternBuilder<T> group(PatternBuilder<T> first, Args... rest);
+template <class T, class... Args>
+PatternBuilder<T> group(T first, Args... rest);
+
+template <class T>
 PredicateBuilder<T> group(T only) 
 {
     return PredicateBuilder<T>([=](T v){ return v == only; });
