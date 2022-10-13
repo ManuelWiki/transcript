@@ -1,1 +1,3 @@
-- add predicate types and members N and M to Predicate class
+- Add Support for lambdas
+- Add Grammar class
+- Design the transcript algorithm and implement it

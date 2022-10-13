@@ -1,127 +1,49 @@
-#include <utility>
 #include <vector>
 #include <functional>
-#include <string>
-
-namespace transcript {
-template<class T>
-struct PredicateBuilder{
-    std::function<bool(T)> eval;
-    int moveInSrc;
-    int moveInTarget;
-    
-    constexpr PredicateBuilder(std::function<bool(T)> e, int move_Src = 1, int move_Target = 1)
-    : eval(e), moveInSrc(move_Src), moveInTarget(move_Target)
-    {}
-
-    constexpr PredicateBuilder(T v, int move_Src = 1, int move_Target = 1)
-    : eval([=](T a){ return a == v; })
-    {}
-};
 
 template <class T>
-struct PatternBuilder {
-    std::vector<PredicateBuilder<T>> preds;
+struct PredBuilder{
+private:
+    using Pred = std::function<bool(T)>;
 
-    void append(PatternBuilder<T> back)
-    {
-        preds.reserve(preds.size() + back.preds.size());
-        preds.insert(preds.end(), back.preds.begin(), back.preds.end());    
-    }
-
-    void append(PredicateBuilder<T> back)
-    {
-        preds.emplace_back(back);    
-    }
-};
-
-template <class T>
-PredicateBuilder<T> group(T only);
-template <class T>
-PatternBuilder<T> group(PatternBuilder<T> only);
-template <class T>
-PredicateBuilder<T> group(PredicateBuilder<T> only);
-template <class T, class... Args>
-PatternBuilder<T> group(PatternBuilder<T> first, Args... rest);
-template <class T, class... Args>
-PatternBuilder<T> group(T first, Args... rest);
-
-template <class T>
-PredicateBuilder<T> group(T only) 
-{
-    return PredicateBuilder<T>([=](T v){ return v == only; });
-}
-
-template <class T>
-PatternBuilder<T> group(PatternBuilder<T> only)
-{
-    return only;
-}
-
-template <class T>
-PredicateBuilder<T> group(PredicateBuilder<T> only)
-{
-    return only;
-}
-
-template <class T, class... Args>
-PatternBuilder<T> group(PatternBuilder<T> first, Args... rest)
-{
-    first.append(group(rest...));
-    return first;
-}
-
-template <class T, class... Args>
-PatternBuilder<T> group(T first, Args... rest)
-{
-    PatternBuilder<T> result;
-    result.preds.emplace_back([=](T v){ return v == first; });
-    result.append(group(rest...));
-    return result;
-}
-    //PatternBuilder
-    //operator|
-    //Predicate
-    //N
-    //etc...
-
-template <class T, class Target>
-class Grammar{
-    using AssocFunction = std::function<Target(T)>;
-    using Predicate = std::function<bool(T)>;
-    struct Pattern {
-        std::vector<Predicate> preds;
-        AssocFunction assoc;
-    };
-
-    std::vector<Pattern> patterns;
-    decltype(patterns.front().preds.begin()) curr_pred;
+    Pred eval;
+    unsigned jumpSrc = 1;
+    unsigned jumpTarget = 1;
 public:
-    void setGrammar(std::vector<Pattern> patts)
+    PredBuilder(T value, unsigned jumpSrc = 1, unsigned jumpTarget = 1)
+    : eval([=](T v){ return v == value; }), jumpSrc(jumpSrc), jumpTarget(jumpTarget)
+    {}
+
+    PredBuilder(Pred eval, unsigned jumpSrc = 1, unsigned jumpTarget = 1)
+    : eval(eval), jumpSrc(jumpSrc), jumpTarget(jumpTarget)
+    {}
+}; 
+
+template <class Src>
+class Builder{ // Pattern Builder
+    std::vector<PredBuilder<Src>> preds;
+
+    template <class T>
+    static void append(Builder& app_to, T last)
     {
-        patterns = patts;
+        app_to.preds.emplace_back(PredBuilder<Src>(last));
     }
 
-    Pattern pattern(PatternBuilder<T> pattBuilder, AssocFunction asc)
+    template <class T, class... Args>
+    static void append(Builder& app_to, T first, Args... rest)
     {
-        // Translate PredicateBuilders into Predicates
-        Pattern result;
-        for (auto e : pattBuilder.preds)
-        {
-            result.preds.emplace_back([=](T v){
-                this->curr_pred += e.moveInSrc;
-                return e.eval(v);
-            });
-        }
-        // Set assoc
-        result.assoc = asc;
-        
-        return result;
+        app_to.preds.emplace_back(PredBuilder<Src>(first));
+        app_to.append(app_to, rest...);
+    }
+public:
+    template<class... Args>
+    Builder(Args... args)
+    {
+        append(*this, args...);
     }
 
-    unsigned countPatterns()
+    unsigned countPreds()
     {
-        return patterns.size();
+        return preds.size();
     }
 };
-}
