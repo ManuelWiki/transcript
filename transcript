@@ -8,40 +8,64 @@ private:
 
     Pred eval;
     unsigned jumpSrc = 1;
-    unsigned jumpTarget = 1;
+    unsigned jumpPattern = 1;
 public:
-    PredBuilder(T value, unsigned jumpSrc = 1, unsigned jumpTarget = 1)
-    : eval([=](T v){ return v == value; }), jumpSrc(jumpSrc), jumpTarget(jumpTarget)
+    PredBuilder(T value, unsigned jumpSrc = 1, unsigned jumpPattern = 1)
+    : eval([=](T v){ return v == value; }), jumpSrc(jumpSrc), jumpPattern(jumpPattern)
     {}
 
-    PredBuilder(Pred eval, unsigned jumpSrc = 1, unsigned jumpTarget = 1)
-    : eval(eval), jumpSrc(jumpSrc), jumpTarget(jumpTarget)
+    PredBuilder(Pred eval, unsigned jumpSrc = 1, unsigned jumpPattern = 1)
+    : eval(eval), jumpSrc(jumpSrc), jumpPattern(jumpPattern)
     {}
 }; 
 
 template <class Src>
 class Builder{ // Pattern Builder
+    using Pred = std::function<bool(Src)>;
+
     std::vector<PredBuilder<Src>> preds;
 
-    template <class T>
-    static void append(Builder& app_to, T last)
-    {
-        app_to.preds.emplace_back(PredBuilder<Src>(last));
-    }
-
-    template <class T, class... Args>
-    static void append(Builder& app_to, T first, Args... rest)
+    template <class... Args>
+    static void append(Builder& app_to, Pred first, Args... rest)
     {
         app_to.preds.emplace_back(PredBuilder<Src>(first));
         app_to.append(app_to, rest...);
     }
-public:
-    template<class... Args>
-    Builder(Args... args)
+
+    static void append(Builder& app_to, Src last)
     {
-        append(*this, args...);
+        app_to.preds.emplace_back(PredBuilder<Src>(last));
     }
 
+    template <class... Args>
+    static void append(Builder& app_to, Src first, Args... rest)
+    {
+        app_to.preds.emplace_back(PredBuilder<Src>(first));
+        app_to.append(app_to, rest...);
+    }
+
+    static void append(Builder& app_to, Pred last)
+    {
+        app_to.preds.emplace_back(PredBuilder<Src>(last));
+    }
+public:
+    //fw First argumetn is Pred
+    template<class... Args>
+    Builder(Pred first, Args... rest)
+    {
+        append(*this, first);
+        append(*this, rest...);
+    }
+    
+    //fw First element is Src
+    template<class... Args>
+    Builder(Src first, Args... rest)
+    {
+        append(*this, first);
+        append(*this, rest...);
+    }
+
+    // For debugging
     unsigned countPreds()
     {
         return preds.size();

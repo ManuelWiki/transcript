@@ -2,23 +2,16 @@
 #include "../transcript"
 
 using namespace std;
-using namespace transcript;
+
+bool T(int a)
+{
+    return true;
+}
 
 int main(int argc, char** argv)
 {
-    // By now, you can initialize Grammars this way.
-    // For a given specialization of Grammar, only arguments of type T for `group` are supported
-    Grammar<char, char> cli;
-    cli.setGrammar({
-        cli.pattern(
-            group('6', 'b', 'z', group('a')),
-            [](char a){ return '7'; }
-        ),
-        cli.pattern(
-            group('5', 'l'),
-            [](char a){ return '8'; }
-        ),
-    });
+    Builder<int> Pattern(1, 1, 3, [](int a){return true;});
+    PredBuilder p = 1;
 
-    cout << cli.countPatterns();
+    cout << Pattern.countPreds();
 }
