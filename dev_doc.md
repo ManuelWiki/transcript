@@ -1,4 +1,4 @@
-# Predicate Builder (class ``PredBuilder<T>``)
+# Predicate Builder (class ``PredBuilder<class T>``)
 
 ## Type Aliases
 - Pred = std::function< T>
@@ -20,7 +20,7 @@ This class is necessary to declare predicates, as the actual Predicates are goin
     - **(Pred< T>, unsigned, unsigned):** Constructor overload for a given ``std::function<T >`` value. Helpful to pass conditions that the current value should meet
         - Both overloads can receive 2 extra arguments. One for the number of positions the user program should move on the src, and the other for the number of positions it should move in the pattern
 
-# Pattern Builder (class ``Builder``)
+# Pattern Builder (class ``Builder<class Src>``)
 
 ## Data Members
 
@@ -28,10 +28,10 @@ This class is necessary to declare predicates, as the actual Predicates are goin
 
 ## Methods
 
-- **append (3 overloads):**
-    - 
+- **append (private, 4 overloads):** Receives a variable number of arguments that are allowed to be of type ``Src`` or ``std::function(bool<Src>)`` (and proximately ``Builder<Src>``, too) and constructs a PredBuilder from each argument and then appends it to the ``preds`` member of the Builder being constructed
+    - **(Src first, Args... rest)**
 
 - **constructor (2 overloads):**
-    - 
+    - f
 
 
