@@ -1,4 +1,4 @@
 - Keep doing documentation
-- Add Support for lambdas
+- Add overload of Builder constructor with a Builder parameter
 - Add Grammar class
 - Design the transcript algorithm and implement it

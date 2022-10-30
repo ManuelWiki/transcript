@@ -21,37 +21,22 @@ public:
 
 template <class Src>
 class Builder{ // Pattern Builder
-    using Pred = std::function<bool(Src)>;
 
     std::vector<PredBuilder<Src>> preds;
 
-    template <class... Args>
-    static void append(Builder& app_to, Pred first, Args... rest)
-    {
-        app_to.preds.emplace_back(PredBuilder<Src>(first));
-        app_to.append(app_to, rest...);
-    }
-
-    static void append(Builder& app_to, Src last)
-    {
-        app_to.preds.emplace_back(PredBuilder<Src>(last));
-    }
+    static void append(Builder& app_to, Src last);
 
     template <class... Args>
-    static void append(Builder& app_to, Src first, Args... rest)
-    {
-        app_to.preds.emplace_back(PredBuilder<Src>(first));
-        app_to.append(app_to, rest...);
-    }
+    static void append(Builder& app_to, Src first, Args... rest);
 
-    static void append(Builder& app_to, Pred last)
-    {
-        app_to.preds.emplace_back(PredBuilder<Src>(last));
-    }
+    template <class... Args>
+    static void append(Builder& app_to, std::function<bool(Src)> first, Args... rest);
+
+    static void append(Builder& app_to, std::function<bool(Src)> last);
 public:
     //fw First argumetn is Pred
     template<class... Args>
-    Builder(Pred first, Args... rest)
+    Builder(std::function<bool(Src)> first, Args... rest)
     {
         append(*this, first);
         append(*this, rest...);
@@ -66,8 +51,38 @@ public:
     }
 
     // For debugging
-    unsigned countPreds()
-    {
-        return preds.size();
-    }
+    unsigned countPreds();
 };
+
+template<class Src>
+void Builder<Src>::append(Builder& app_to, Src last)
+{
+    app_to.preds.emplace_back(PredBuilder<Src>(last));
+}
+
+template <class Src> template <class... Args>
+void Builder<Src>::append(Builder& app_to, Src first, Args... rest)
+{
+    app_to.preds.emplace_back(PredBuilder<Src>(first));
+    app_to.append(app_to, rest...);
+}
+
+template <class Src> template <class... Args>
+void Builder<Src>::append(Builder& app_to, std::function<bool(Src)> first, Args... rest)
+{
+    app_to.preds.emplace_back(PredBuilder<Src>(first));
+    app_to.append(app_to, rest...);
+}
+
+template <class Src>
+void Builder<Src>::append(Builder& app_to, std::function<bool(Src)> last)
+{
+    app_to.preds.emplace_back(PredBuilder<Src>(last));
+}
+
+// For debugging
+template <class Src>
+unsigned Builder<Src>::countPreds()
+{
+    return preds.size();
+}
