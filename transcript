@@ -1,8 +1,6 @@
 #include <vector>
 #include <functional>
 
-// Test if I can still push
-
 template <class T>
 struct PredBuilder{
 private:
@@ -26,17 +24,26 @@ class Builder{ // Pattern Builder
 
     std::vector<PredBuilder<Src>> preds;
 
+    // Overload for Src
     static void append(Builder& app_to, Src last);
 
     template <class... Args>
     static void append(Builder& app_to, Src first, Args... rest);
 
+    // Overload for Pred
     template <class... Args>
     static void append(Builder& app_to, std::function<bool(Src)> first, Args... rest);
 
     static void append(Builder& app_to, std::function<bool(Src)> last);
+
+    // Overload for Builder
+    template <class... Args>
+    static void append(Builder& app_to, Builder first, Args... rest);
+
+    static void append(Builder& app_to, Builder last);
+
 public:
-    //fw First argumetn is Pred
+    //fw first argument is Pred
     template<class... Args>
     Builder(std::function<bool(Src)> first, Args... rest)
     {
@@ -44,9 +51,17 @@ public:
         append(*this, rest...);
     }
     
-    //fw First element is Src
+    //fw first element is Src
     template<class... Args>
     Builder(Src first, Args... rest)
+    {
+        append(*this, first);
+        append(*this, rest...);
+    }
+
+    //fw first element is another Builder
+    template <class... Args>
+    Builder(Builder<Src> first, Args... rest)
     {
         append(*this, first);
         append(*this, rest...);
@@ -56,6 +71,7 @@ public:
     unsigned countPreds();
 };
 
+// Overload for Src
 template<class Src>
 void Builder<Src>::append(Builder& app_to, Src last)
 {
@@ -69,6 +85,7 @@ void Builder<Src>::append(Builder& app_to, Src first, Args... rest)
     app_to.append(app_to, rest...);
 }
 
+// Overload for Pred
 template <class Src> template <class... Args>
 void Builder<Src>::append(Builder& app_to, std::function<bool(Src)> first, Args... rest)
 {
@@ -80,6 +97,24 @@ template <class Src>
 void Builder<Src>::append(Builder& app_to, std::function<bool(Src)> last)
 {
     app_to.preds.emplace_back(PredBuilder<Src>(last));
+}
+
+// Overload for Builder
+template <class Src> template <class... Args>
+void Builder<Src>::append(Builder& app_to, Builder<Src> first, Args... rest)
+{
+    for(auto &p : first.preds){
+        app_to.preds.emplace_back(p);
+    }
+    append(app_to, rest...);
+}
+
+template <class Src> 
+void Builder<Src>::append(Builder& app_to, Builder<Src> last)
+{
+    for(auto &p : last.preds){
+        app_to.preds.emplace_back(p);
+    }
 }
 
 // For debugging
