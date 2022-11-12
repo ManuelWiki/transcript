@@ -10,8 +10,7 @@ bool T(int a)
 
 int main(int argc, char** argv)
 {
-    Builder<int> Pattern(1, 1, 3, [](int a){return true;});
-    PredBuilder p = 1;
+    Builder<int> pattern(1, Builder<int>(1, 2), 3, [](int a){return true;});
 
-    cout << Pattern.countPreds();
+    cout << pattern.countPreds();
 }

@@ -34,4 +34,32 @@ This class is necessary to declare predicates, as the actual Predicates are goin
 - **constructor (2 overloads):**
     - f
 
+# Intended functionality
 
+You can initialize a ``Grammar`` object giving the types ``char`` and ``int`` as template arguments and then passing a set of Builder-AssocFunction pairs as arguments for the constructor as follows:
+ 
+    Grammar<char, int> numbers(
+        {
+            Builder("one"),
+            1
+        },
+        {
+            Builder("two"),
+            2
+        },
+        {
+            Builder("three"),
+            3
+        }
+    );
+
+Calling its ``transcript`` method giving a string, a vector or an array of ``char``s (_a_), and an empty array or vector of ``int``s (_b_) as arguments will append a ``1`` for every time the string 'one' occurs, a ``2`` for every time the string 'two' occurs and a ``3`` for every time the string 'three' occurs, into _b_. Just like this:
+
+    string s("three two onetwo three");
+    std::vector v;
+    numbers.transcript(words, nums);
+
+    // Now v contains {3, 2, 1, 2, 3}
+
+Note that transcript just matches the sequences of characters in the string to the ones provided as patterns (We call a pattern every string we provide to the constructor associetaed to a function or value). For that reason, ``transcript`` stores a ``1`` and a ``2`` for the 'onetwo' string, even if they're not separated.
+``transcript`` ignores all information that cannot be matched, such as spaces

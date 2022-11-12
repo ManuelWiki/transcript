@@ -1,4 +1,3 @@
 - Keep doing documentation
-- Add overload of Builder constructor with a Builder parameter
 - Add Grammar class
 - Design the transcript algorithm and implement it
