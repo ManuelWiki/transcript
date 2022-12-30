@@ -1,3 +1,5 @@
+This document is out of date. The class PredBuilder is now called Token and the class Builder, Pattern. Some other minor details have changed too
+
 # Predicate Builder (class ``PredBuilder<class T>``)
 
 ## Type Aliases

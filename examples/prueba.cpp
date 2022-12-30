@@ -10,7 +10,7 @@ bool T(int a)
 
 int main(int argc, char** argv)
 {
-    Builder<int> pattern(1, Builder<int>(1, 2), 3, [](int a){return true;});
+    Pattern<int> pattern(1, Pattern<int>(1, 2), 3, [](int a){return true;});
 
     cout << pattern.countPreds();
 }
