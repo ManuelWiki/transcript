@@ -2,20 +2,19 @@
 #include <functional>
 
 template <class T>
-struct Token{
-private:
+class Token{
     using Pred = std::function<bool(T)>;
 
     Pred eval;
-    unsigned jumpSrc = 1;
-    unsigned jumpPattern = 1;
+    unsigned min = 1;
+    unsigned max = 1;
 public:
-    Token(T value, unsigned jumpSrc = 1, unsigned jumpPattern = 1)
-    : eval([=](T v){ return v == value; }), jumpSrc(jumpSrc), jumpPattern(jumpPattern)
+    Token(T value)
+    : eval([=](T v){ return v == value; })
     {}
 
-    Token(Pred eval, unsigned jumpSrc = 1, unsigned jumpPattern = 1)
-    : eval(eval), jumpSrc(jumpSrc), jumpPattern(jumpPattern)
+    Token(Pred eval)
+    : eval(eval)
     {}
 }; 
 
@@ -123,3 +122,25 @@ unsigned Pattern<Src>::countPreds()
 {
     return preds.size();
 }
+
+template <class Src, class Target>
+class AssocFn { // Associated Function
+    std::function<Target(std::vector<Src>)> fn;
+
+public:
+    AssocFn(std::function<Target(std::vector<Src>)> f)
+    : fn(f)
+    {}
+
+    AssocFn(std::function<Target(Src)> f)
+    : fn([&](std::vector<Src> s){
+        return f(s.back());
+    })
+    {}
+
+    // For debugging
+    Target call(std::vector<Src> p)
+    {
+        return fn(p); 
+    }
+};
