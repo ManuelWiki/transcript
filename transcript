@@ -1,13 +1,12 @@
 #include <vector>
 #include <functional>
+#include <utility>
 
 template <class T>
 class Token{
     using Pred = std::function<bool(T)>;
 
     Pred eval;
-    unsigned min = 1;
-    unsigned max = 1;
 public:
     Token(T value)
     : eval([=](T v){ return v == value; })
@@ -142,5 +141,24 @@ public:
     Target call(std::vector<Src> p)
     {
         return fn(p); 
+    }
+};
+
+template <class Src, class Target>
+class Syntax {
+    std::vector<std::pair<Pattern<Src>, AssocFn<Src, Target>>> patts;
+
+public:
+    Syntax(std::initializer_list<std::pair<Pattern<Src>, AssocFn<Src, Target>>> pairs)
+    {
+        for (auto &p : pairs)
+        {
+            patts.push_back(p);
+        }
+    }
+
+    // For debugging 
+    unsigned countPatterns() {
+        return patts.size();
     }
 };

@@ -1,3 +1,5 @@
+// Spanish lesson: Prueba = Test :)
+
 #include <iostream>
 #include "../transcript"
 
@@ -10,7 +12,16 @@ bool T(int a)
 
 int main(int argc, char** argv)
 {
-    Pattern<int> pattern(1, Pattern<int>(1, 2), 3, [](int a){return true;});
+    Syntax<int, string> numsToWords({
+        {
+            Pattern<int>(1, 2),
+            AssocFn<int, string>([](int a){ return "doce"; })
+        },
+        {
+            Pattern<int>(1, 3),
+            AssocFn<int, string>([](int a){ return "trece"; })
+        }
+    });
 
-    cout << pattern.countPreds();
+    cout << numsToWords.countPatterns();
 }
