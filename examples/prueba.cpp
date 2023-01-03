@@ -19,10 +19,14 @@ int main(int argc, char** argv)
 {
     Syntax<char, string> numToWord({
         Pattern(
-            TokenList('a', 'b'),
-            AssocFn([](char a){return string("doce");})
+            TokenList('1', '2'),
+            AssocFn<char, string>([](char a){return string("doce");})
+        ),
+        Pattern(
+            TokenList('1', '4'),
+            AssocFn<char, string>([](char a){return string("catorce");})
         )
     });
     
-    AssocFn<char, string> a([](char a){ return string("h"); });
+    cout << numToWord.countPatterns();
 }
