@@ -17,111 +17,6 @@ public:
     {}
 }; 
 
-template <class Src>
-class Pattern{
-
-    std::vector<Token<Src>> preds;
-
-    // Overload for Src
-    static void append(Pattern& app_to, Src last);
-
-    template <class... Args>
-    static void append(Pattern& app_to, Src first, Args... rest);
-
-    // Overload for Pred
-    template <class... Args>
-    static void append(Pattern& app_to, std::function<bool(Src)> first, Args... rest);
-
-    static void append(Pattern& app_to, std::function<bool(Src)> last);
-
-    // Overload for Pattern
-    template <class... Args>
-    static void append(Pattern& app_to, Pattern first, Args... rest);
-
-    static void append(Pattern& app_to, Pattern last);
-
-public:
-    //fw first argument is Pred
-    template<class... Args>
-    Pattern(std::function<bool(Src)> first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-    
-    //fw first element is Src
-    template<class... Args>
-    Pattern(Src first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-
-    //fw first element is another Pattern
-    template <class... Args>
-    Pattern(Pattern<Src> first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-
-    // For debugging
-    unsigned countPreds();
-};
-
-// Overload for Src
-template<class Src>
-void Pattern<Src>::append(Pattern& app_to, Src last)
-{
-    app_to.preds.emplace_back(Token<Src>(last));
-}
-
-template <class Src> template <class... Args>
-void Pattern<Src>::append(Pattern& app_to, Src first, Args... rest)
-{
-    app_to.preds.emplace_back(Token<Src>(first));
-    app_to.append(app_to, rest...);
-}
-
-// Overload for Pred
-template <class Src> template <class... Args>
-void Pattern<Src>::append(Pattern& app_to, std::function<bool(Src)> first, Args... rest)
-{
-    app_to.preds.emplace_back(Token<Src>(first));
-    app_to.append(app_to, rest...);
-}
-
-template <class Src>
-void Pattern<Src>::append(Pattern& app_to, std::function<bool(Src)> last)
-{
-    app_to.preds.emplace_back(Token<Src>(last));
-}
-
-// Overload for Pattern
-template <class Src> template <class... Args>
-void Pattern<Src>::append(Pattern& app_to, Pattern<Src> first, Args... rest)
-{
-    for(auto &p : first.preds){
-        app_to.preds.emplace_back(p);
-    }
-    append(app_to, rest...);
-}
-
-template <class Src> 
-void Pattern<Src>::append(Pattern& app_to, Pattern<Src> last)
-{
-    for(auto &p : last.preds){
-        app_to.preds.emplace_back(p);
-    }
-}
-
-// For debugging
-template <class Src>
-unsigned Pattern<Src>::countPreds()
-{
-    return preds.size();
-}
-
 template <class Src, class Target>
 class AssocFn { // Associated Function
     std::function<Target(std::vector<Src>)> fn;
@@ -144,16 +39,131 @@ public:
     }
 };
 
-template <class Src, class Target>
-class Syntax {
-    std::vector<std::pair<Pattern<Src>, AssocFn<Src, Target>>> patts;
+template <class Src>
+class TokenList{
+
+    std::vector<Token<Src>> preds;
+
+    // Overload for Src
+    static void append(TokenList& app_to, Src last);
+
+    template <class... Args>
+    static void append(TokenList& app_to, Src first, Args... rest);
+
+    // Overload for Pred
+    template <class... Args>
+    static void append(TokenList& app_to, std::function<bool(Src)> first, Args... rest);
+
+    static void append(TokenList& app_to, std::function<bool(Src)> last);
+
+    // Overload for TokenList
+    template <class... Args>
+    static void append(TokenList& app_to, TokenList first, Args... rest);
+
+    static void append(TokenList& app_to, TokenList last);
 
 public:
-    Syntax(std::initializer_list<std::pair<Pattern<Src>, AssocFn<Src, Target>>> pairs)
+    //fw first argument is Pred
+    template<class... Args>
+    TokenList(std::function<bool(Src)> first, Args... rest)
     {
-        for (auto &p : pairs)
+        append(*this, first);
+        append(*this, rest...);
+    }
+    
+    //fw first element is Src
+    template<class... Args>
+    TokenList(Src first, Args... rest)
+    {
+        append(*this, first);
+        append(*this, rest...);
+    }
+
+    //fw first element is another TokenList
+    template <class... Args>
+    TokenList(TokenList<Src> first, Args... rest)
+    {
+        append(*this, first);
+        append(*this, rest...);
+    }
+
+    // For debugging
+    unsigned countPreds();
+};
+
+// Overload for Src
+template<class Src>
+void TokenList<Src>::append(TokenList& app_to, Src last)
+{
+    app_to.preds.emplace_back(Token<Src>(last));
+}
+
+template <class Src> template <class... Args>
+void TokenList<Src>::append(TokenList& app_to, Src first, Args... rest)
+{
+    app_to.preds.emplace_back(Token<Src>(first));
+    app_to.append(app_to, rest...);
+}
+
+// Overload for Pred
+template <class Src> template <class... Args>
+void TokenList<Src>::append(TokenList& app_to, std::function<bool(Src)> first, Args... rest)
+{
+    app_to.preds.emplace_back(Token<Src>(first));
+    app_to.append(app_to, rest...);
+}
+
+template <class Src>
+void TokenList<Src>::append(TokenList& app_to, std::function<bool(Src)> last)
+{
+    app_to.preds.emplace_back(Token<Src>(last));
+}
+
+// Overload for TokenList
+template <class Src> template <class... Args>
+void TokenList<Src>::append(TokenList& app_to, TokenList<Src> first, Args... rest)
+{
+    for(auto &p : first.preds){
+        app_to.preds.emplace_back(p);
+    }
+    append(app_to, rest...);
+}
+
+template <class Src> 
+void TokenList<Src>::append(TokenList& app_to, TokenList<Src> last)
+{
+    for(auto &p : last.preds){
+        app_to.preds.emplace_back(p);
+    }
+}
+
+// For debugging
+template <class Src>
+unsigned TokenList<Src>::countPreds()
+{
+    return preds.size();
+}
+
+template <class Src, class Target>
+class Pattern {
+    TokenList<Src> tokens;
+    AssocFn<Src, Target> fn;
+public:
+    Pattern(TokenList<Src> tkns, AssocFn<Src, Target> f)
+    : tokens(tkns), fn(f)
+    {}
+};
+
+template <class Src, class Target>
+class Syntax {
+    std::vector<Pattern<Src, Target>> patts;
+
+public:
+    Syntax(std::initializer_list<Pattern<Src, Target>> patterns)
+    {
+        for (auto &p : patterns)
         {
-            patts.push_back(p);
+            patts.emplace_back(p);
         }
     }
 

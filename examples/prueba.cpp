@@ -10,18 +10,19 @@ bool T(int a)
     return true;
 }
 
+void test(AssocFn<int, string> f)
+{
+    return;
+}
+
 int main(int argc, char** argv)
 {
-    Syntax<int, string> numsToWords({
-        {
-            Pattern<int>(1, 2),
-            AssocFn<int, string>([](int a){ return "doce"; })
-        },
-        {
-            Pattern<int>(1, 3),
-            AssocFn<int, string>([](int a){ return "trece"; })
-        }
+    Syntax<char, string> numToWord({
+        Pattern(
+            TokenList('a', 'b'),
+            AssocFn([](char a){return string("doce");})
+        )
     });
-
-    cout << numsToWords.countPatterns();
+    
+    AssocFn<char, string> a([](char a){ return string("h"); });
 }
