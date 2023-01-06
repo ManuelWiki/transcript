@@ -20,7 +20,7 @@ int main(int argc, char** argv)
     Syntax<char, string> numToWord({
         Pattern(
             TokenList('1', '2'),
-            AssocFn<char, string>([](char a){return string("doce");})
+            AssocFn<char, string>([](char a){ return string("doce"); })
         ),
         Pattern(
             TokenList('1', '4'),
