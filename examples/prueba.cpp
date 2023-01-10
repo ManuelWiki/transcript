@@ -25,8 +25,15 @@ int main(int argc, char** argv)
         Pattern(
             TokenList('1', '4'),
             AssocFn<char, string>([](char a){return string("catorce");})
+        ),
+        Pattern(
+            TokenList(TokenList('2', '1') | TokenList('2', '0')),
+            AssocFn<char, string>([](char a){return string("veinte o veintiuno");})
         )
     });
     
-    cout << numToWord.countPatterns();
+    TokenList testOr(TokenList('2', '1') | TokenList('2', '0'));
+    
+    cout << "numToWord: " << numToWord.countPatterns() << "\n"
+        << "testOr: " << testOr.size();
 }
