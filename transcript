@@ -4,9 +4,9 @@
 
 enum class TokenType { 
     none, // To use in the stack in the transpile function. Uses no members (else than type)
-    eval, // Normal Token to be evaluated. Uses eval
-    loop, // Loop token for multiple predicates. Uses a, b and c
-    options // OR token. Uses a and b
+    eval, // Normal Token to be evaluated. Uses eval only
+    loop, // Loop tokens. Uses a (for min), b (for max) and c (for size)
+    options // OR token. Uses a (for size of first option) and b (for size of 2nd option)
 };
 
 template <class T>
@@ -91,12 +91,22 @@ public:
         append(*this, rest...);
     }
     
+    TokenList(std::function<bool(Src)> first)
+    {
+        append(*this, first);
+    }
+    
     //fw first element is Src
     template<class... Args>
     TokenList(Src first, Args... rest)
     {
         append(*this, first);
         append(*this, rest...);
+    }
+    
+    TokenList(Src first)
+    {
+        append(*this, first);
     }
 
     //fw first element is another TokenList
@@ -106,6 +116,10 @@ public:
         append(*this, first);
         append(*this, rest...);
     }
+    TokenList(TokenList<Src> first, Args... rest)
+    {
+        append(*this, first);
+    }
 
     //fw first argument is Token
     template<class... Args>
@@ -114,8 +128,11 @@ public:
         append(*this, first);
         append(*this, rest...);
     }
+    TokenList(Token<Src> first)
+    {
+        append(*this, first);
+    }
 
-    // For debugging
     unsigned size();
 };
 
@@ -179,11 +196,16 @@ void TokenList<Src>::append(TokenList& app_to, TokenList<Src> last)
     }
 }
 
-// For debugging
 template <class Src>
 unsigned TokenList<Src>::size()
 {
     return preds.size();
+}
+
+template <class Src>
+TokenList<Src> loop(unsigned min, unsigned max, TokenList<Src> body)
+{
+    return TokenList<Src>(Token<Src>(TokenType::loop, min, max, body.size()), body);
 }
 
 template <class Src>
