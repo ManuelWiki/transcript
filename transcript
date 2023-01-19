@@ -1,6 +1,5 @@
 #include <vector>
 #include <functional>
-#include <utility>
 
 enum class TokenType { 
     none, // To use in the stack in the transpile function. Uses no members (else than type)
@@ -115,10 +114,6 @@ public:
     {
         append(*this, first);
         append(*this, rest...);
-    }
-    TokenList(TokenList<Src> first, Args... rest)
-    {
-        append(*this, first);
     }
 
     //fw first argument is Token
