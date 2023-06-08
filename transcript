@@ -1,241 +1,170 @@
-#include <vector>
-#include <functional>
+#include <string>
 
-enum class TokenType { 
-    none, // To use in the stack in the transpile function. Uses no members (else than type)
-    eval, // Normal Token to be evaluated. Uses eval only
-    loop, // Loop tokens. Uses a (for min), b (for max) and c (for size)
-    options // OR token. Uses a (for size of first option) and b (for size of 2nd option)
-};
+enum class TokenType { Normal, End, Opt1, Opt2, N, ZeroOrMore, Optional };
 
-template <class T>
-class Token{
-protected:
-    using Pred = std::function<bool(T)>;
-
-    unsigned a, b, c;
+class Token {
+    char value;
+    unsigned number = 0;
     TokenType type;
-    Pred eval;
-public:
-    Token(T value)
-    : eval([=](T v){ return v == value; }), type(TokenType::eval)
-    {}
 
-    Token(Pred eval)
-    : eval(eval), type(TokenType::eval)
-    {}
+    Token *child;
+    Token *next;
 
-    constexpr Token(TokenType type, unsigned a, unsigned b, unsigned c = 0)
-    : type(type), a(a), b(b), c(c)
-    {}
-};
+    friend Token NToken(unsigned);
+    friend Token EndToken();
+    friend Token ZeroOrMore();
+    friend Token Optional();
+    friend Token Option1();
+    friend Token Option2();
 
-template <class Src, class Target>
-class AssocFn { // Associated Function
-    std::function<Target(std::vector<Src>)> fn;
+    Token (TokenType t, unsigned n = 0)
+    :type(t), number(n)
+    {}
 
 public:
-    AssocFn(std::function<Target(std::vector<Src>)> f)
-    : fn(f)
+    Token (char v)
+    : value(v)
     {}
 
-    AssocFn(std::function<Target(Src)> f)
-    : fn([&](std::vector<Src> s){
-        return f(s.back());
-    })
-    {}
+    bool isNormal() { return type == TokenType::Normal; }
+    bool isN() { return type == TokenType::N; }
+    bool isEnd() { return type == TokenType::End; }
+    bool isZeroOrMore() { return type == TokenType::ZeroOrMore; }
+    bool isOptional() { return type == TokenType::Optional; }
+    bool isOpt1() { return type == TokenType::Opt1; }
+    bool isOpt2() { return type == TokenType::Opt2; }
 
-    // For debugging
-    Target call(std::vector<Src> p)
+    bool tolerates()
     {
-        return fn(p); 
+        return isZeroOrMore() || isOptional() || isOpt1;
     }
+
+    bool isGroup()
+    {
+        return isN() || isZeroOrMore() || isOptional() || isOpt1() || isOpt2();
+    }
+
+    bool isLeaf() { return child == nullptr && next == nullptr; }
+
+    unsigned getNumber() { return number; }
 };
 
-template <class Src>
-class TokenList{
-
-    std::vector<Token<Src>> preds;
-
-    // Overload for Src
-    static void append(TokenList& app_to, Src last);
-
-    template <class... Args>
-    static void append(TokenList& app_to, Src first, Args... rest);
-
-    // Overload for std::function
-    template <class... Args>
-    static void append(TokenList& app_to, std::function<bool(Src)> first, Args... rest);
-
-    static void append(TokenList& app_to, std::function<bool(Src)> last);
-
-    // Overload for TokenList
-    template <class... Args>
-    static void append(TokenList& app_to, TokenList first, Args... rest);
-
-    static void append(TokenList& app_to, TokenList last);
-
-    // Overload for Token
-    template <class... Args>
-    static void append(TokenList& app_to, Token<Src> first, Args... rest);
-
-    static void append(TokenList& app_to, Token<Src> last);
-
-public:
-    //fw first argument is std::function
-    template<class... Args>
-    TokenList(std::function<bool(Src)> first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-    
-    TokenList(std::function<bool(Src)> first)
-    {
-        append(*this, first);
-    }
-    
-    //fw first element is Src
-    template<class... Args>
-    TokenList(Src first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-    
-    TokenList(Src first)
-    {
-        append(*this, first);
-    }
-
-    //fw first element is another TokenList
-    template <class... Args>
-    TokenList(TokenList<Src> first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-
-    //fw first argument is Token
-    template<class... Args>
-    TokenList(Token<Src> first, Args... rest)
-    {
-        append(*this, first);
-        append(*this, rest...);
-    }
-    TokenList(Token<Src> first)
-    {
-        append(*this, first);
-    }
-
-    unsigned size();
-};
-
-// Overload for Token
-template<class Src>
-void TokenList<Src>::append(TokenList& app_to, Token<Src> last)
+Token NToken(unsigned n)
 {
-    app_to.preds.emplace_back(last);
+    return Token(TokenType::N, n);
+}
+Token EndToken()
+{
+    return Token(TokenType::End);
+}
+Token ZeroOrMore() /* (*) */
+{
+    return Token(TokenType::ZeroOrMore); 
+}
+Token Optional() /* (?) */
+{
+    return Token(TokenType::Optional); 
+}
+Token Option1()
+{
+    return Token(TokenType::Opt1);
+}
+Token Option2()
+{
+    return Token(TokenType::Opt2);
 }
 
-template <class Src> template <class... Args>
-void TokenList<Src>::append(TokenList& app_to, Token<Src> first, Args... rest)
-{
-    app_to.preds.emplace_back(first);
-    app_to.append(app_to, rest...);
-}
-
-// Overload for Src
-template<class Src>
-void TokenList<Src>::append(TokenList& app_to, Src last)
-{
-    app_to.preds.emplace_back(Token<Src>(last));
-}
-
-template <class Src> template <class... Args>
-void TokenList<Src>::append(TokenList& app_to, Src first, Args... rest)
-{
-    app_to.preds.emplace_back(Token<Src>(first));
-    app_to.append(app_to, rest...);
-}
-
-// Overload for Pred
-template <class Src> template <class... Args>
-void TokenList<Src>::append(TokenList& app_to, std::function<bool(Src)> first, Args... rest)
-{
-    app_to.preds.emplace_back(Token<Src>(first));
-    app_to.append(app_to, rest...);
-}
-
-template <class Src>
-void TokenList<Src>::append(TokenList& app_to, std::function<bool(Src)> last)
-{
-    app_to.preds.emplace_back(Token<Src>(last));
-}
-
-// Overload for TokenList
-template <class Src> template <class... Args>
-void TokenList<Src>::append(TokenList& app_to, TokenList<Src> first, Args... rest)
-{
-    for(auto &p : first.preds){
-        app_to.preds.emplace_back(p);
-    }
-    append(app_to, rest...);
-}
-
-template <class Src> 
-void TokenList<Src>::append(TokenList& app_to, TokenList<Src> last)
-{
-    for(auto &p : last.preds){
-        app_to.preds.emplace_back(p);
-    }
-}
-
-template <class Src>
-unsigned TokenList<Src>::size()
-{
-    return preds.size();
-}
-
-template <class Src>
-TokenList<Src> loop(unsigned min, unsigned max, TokenList<Src> body)
-{
-    return TokenList<Src>(Token<Src>(TokenType::loop, min, max, body.size()), body);
-}
-
-template <class Src>
-TokenList<Src> operator| (TokenList<Src> a, TokenList<Src> b)
-{
-    unsigned len_a = a.size();
-    unsigned len_b = b.size();
-    return TokenList<Src>(Token<Src>(TokenType::options, len_a, len_b), a, b);
-}
-
-template <class Src, class Target>
+template <class AssociatedType>
 class Pattern {
-    TokenList<Src> tokens;
-    AssocFn<Src, Target> fn;
-public:
-    Pattern(TokenList<Src> tkns, AssocFn<Src, Target> f)
-    : tokens(tkns), fn(f)
-    {}
-};
+    Token *root;
+    AssociatedType assocValue;
+    
+    class NestingLevel {
+        Token *token;
+        NestingLevel *parent;
+        std::string::const_iterator inputPosition;
+        unsigned count = 0;
 
-template <class Src, class Target>
-class Syntax {
-    std::vector<Pattern<Src, Target>> patts;
+    public:
+        NestingLevel(Token *t, std::string::const_iterator i, NestingLevel *p)
+        : token(t), inputPosition(i), parent(p)
+        {}
 
-public:
-    Syntax(std::initializer_list<Pattern<Src, Target>> patterns)
-    {
-        for (auto &p : patterns)
+        Token *getToken() { return token; }
+        NestingLevel *getParent() { return parent; }
+        unsigned getCount() { return count; }
+        std::string::const_iterator getInputPosition() { return inputPosition; }
+
+        void incrementCount() { count++; }
+
+        bool isFull() { return count == token->getNumber; }
+    };
+
+    class NestingStack {
+        NestingLevel *top = nullptr;
+
+    public:
+        bool handle(Token *&patternPos, std::string::const_iterator inputPos)
         {
-            patts.emplace_back(p);
+            const NestingLevel *nearest = nullptr;
+            NestingLevel *curr = top;
+            while (curr != nullptr && nearest == nullptr)
+            {
+                if (curr->getToken()->tolerates())
+                    nearest = curr;
+                curr = curr->getParent();
+            }
+            // nearest = the highest Nesting Level that tolerates
+
+            if (nearest == nullptr)
+                return false;
+            
+            inputPos = nearest->getInputPosition();
+            patternPos = nearest->getToken()->getNext();
+
+            return true;
+        }
+
+        bool isEmpty() { return top == nullptr; }
+
+        void addLevel(Token *t, std::string::const_iterator i)
+        {
+            top = new NestingLevel(t, i, top);
+        }
+
+        void pop()
+        {
+            // DANGER: do not call this on empty stacks
+            top = top->getParent();
+            // todo: I think I should free the memory occupied by top's last value
         }
     }
 
-    // For debugging 
-    unsigned countPatterns() {
-        return patts.size();
+    bool matches(std::string::const_iterator &bg, std::string::const_iterator &end)
+    {
+        // stop when (a) curr isLeaf and (b) stack is empty and (c) curr char != end
+        // (a ^ b) = ~(~a | ~b) = A; ~A = (~a | ~b) = curr is not Leaf or stack is not empty
+        Token *curr = root;
+        std::string::const_iterator curr_char = bg;
+        NestingStack stack;
+        /*
+        is Normal?
+            applies?
+                curr token = curr_token.next, increment curr char
+            else
+                !stack.handle()? return false
+        is Group?
+            stack.add(currtoken, ...), curr_token = curr_token.inner, DON'T increment curr char
+
+        is Leaf?
+            top is opt1?
+                curr_token = stack.getTop().getToken() + 2, increment curr char
+            else, top is full?
+                curr_token = stack.getTop().getToken() + 1, stack.pop(), increment curr char
+            else
+                count++, curr_token = stack.getTop().getToken() + 1, increment curr char
+        */
+
+        return true;
     }
 };
