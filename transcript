@@ -1,17 +1,20 @@
 #include <string>
 
-enum class TokenType { Normal, End, Opt1, Opt2, N, ZeroOrMore, Optional };
+enum class TokenType { Normal, Opt1, Opt2, N, ZeroOrMore, Optional, OneOrMore };
 
 class Token {
+    using PredPointer = bool(*)(char);
+
+    PredPointer function = nullptr;
     char value;
     unsigned number = 0;
-    TokenType type;
+    TokenType type = TokenType::Normal;
 
-    Token *child;
-    Token *next;
+    Token *child = nullptr;
+    Token *next = nullptr;
 
+    friend Token OneOrMore();
     friend Token NToken(unsigned);
-    friend Token EndToken();
     friend Token ZeroOrMore();
     friend Token Optional();
     friend Token Option1();
@@ -26,36 +29,75 @@ public:
     : value(v)
     {}
 
-    bool isNormal() { return type == TokenType::Normal; }
-    bool isN() { return type == TokenType::N; }
-    bool isEnd() { return type == TokenType::End; }
-    bool isZeroOrMore() { return type == TokenType::ZeroOrMore; }
-    bool isOptional() { return type == TokenType::Optional; }
-    bool isOpt1() { return type == TokenType::Opt1; }
-    bool isOpt2() { return type == TokenType::Opt2; }
+    Token (PredPointer f): function(f) {}
 
-    bool tolerates()
+    template <class Lambda>
+    Token (Lambda f): function(f) {}
+
+    Token (Token *other) { *this = *other; }
+
+    bool isNormal() const { return type == TokenType::Normal; }
+    bool isN() const { return type == TokenType::N; }
+    bool isOneOrMore() const { return type == TokenType::OneOrMore; }
+    bool isZeroOrMore() const { return type == TokenType::ZeroOrMore; }
+    bool isOptional() const { return type == TokenType::Optional; }
+    bool isOpt1() const { return type == TokenType::Opt1; }
+    bool isOpt2() const { return type == TokenType::Opt2; }
+
+    bool tolerates() const
     {
-        return isZeroOrMore() || isOptional() || isOpt1;
+        return isZeroOrMore() || isOptional() || isOpt1();
     }
 
-    bool isGroup()
+    bool isGroup() const
     {
-        return isN() || isZeroOrMore() || isOptional() || isOpt1() || isOpt2();
+        return !isNormal();
     }
 
-    bool isLeaf() { return child == nullptr && next == nullptr; }
+    bool isLeaf() const { return child == nullptr && next == nullptr; }
 
-    unsigned getNumber() { return number; }
+    unsigned getNumber() const { return number; }
+
+    Token *getNext() const { return next; }
+    Token *getChild() const { return child; }
+
+    bool appliesFor(char test) const
+    {
+        if (function != nullptr)
+            return (*function)(test);
+
+        return test == value; 
+    }
+
+    void setNext(Token *other) { next = other; }
+    void setChild(Token *other) { child = other; }
+
+    template <class First, class... Args>
+    void setSiblings(First, Args...);
+    void setSiblings();
+
+    template <class First, class... Args>
+    void setChildren(First first, Args... rest)
+    {
+        Token *firstChild = new Token(first);
+        setChild(firstChild);
+        firstChild->setSiblings(rest...);
+    }
 };
 
+template <class First, class... Args>
+void Token::setSiblings(First first, Args... rest)
+{
+    Token *firstSibling = new Token(first);
+    setNext(firstSibling);
+    firstSibling->setSiblings(rest...);
+}
+void Token::setSiblings() {}
+
+Token OneOrMore(); /* (+) */
 Token NToken(unsigned n)
 {
     return Token(TokenType::N, n);
-}
-Token EndToken()
-{
-    return Token(TokenType::End);
 }
 Token ZeroOrMore() /* (*) */
 {
@@ -73,6 +115,7 @@ Token Option2()
 {
     return Token(TokenType::Opt2);
 }
+
 
 template <class AssociatedType>
 class Pattern {
@@ -97,7 +140,7 @@ class Pattern {
 
         void incrementCount() { count++; }
 
-        bool isFull() { return count == token->getNumber; }
+        bool isFull() { return count == token->getNumber(); }
     };
 
     class NestingStack {
@@ -106,21 +149,23 @@ class Pattern {
     public:
         bool handle(Token *&patternPos, std::string::const_iterator inputPos)
         {
-            const NestingLevel *nearest = nullptr;
+            NestingLevel *nearest = nullptr;
             NestingLevel *curr = top;
             while (curr != nullptr && nearest == nullptr)
             {
-                if (curr->getToken()->tolerates())
+                Token *token = curr->getToken();
+                if (token->tolerates() || (token->isOneOrMore() && top->getCount() > 0))
                     nearest = curr;
                 curr = curr->getParent();
             }
-            // nearest = the highest Nesting Level that tolerates
+            // nearest = the highest Nesting Level that tolerates (if any)
 
             if (nearest == nullptr)
                 return false;
             
             inputPos = nearest->getInputPosition();
             patternPos = nearest->getToken()->getNext();
+            pop();
 
             return true;
         }
@@ -138,32 +183,72 @@ class Pattern {
             top = top->getParent();
             // todo: I think I should free the memory occupied by top's last value
         }
-    }
 
-    bool matches(std::string::const_iterator &bg, std::string::const_iterator &end)
+        bool topIsOpt1() 
+        {
+            if (top == nullptr) return false; 
+            return top->getToken()->isOpt1();
+        }
+        bool topIsFull()
+        {
+            if (top == nullptr) return false;
+            return top->getToken()->getNumber() == top->getCount();
+        }
+
+        Token *topToken() { return top->getToken(); }
+
+        void incrementCount() { top->incrementCount(); }
+    };
+
+public:
+    template <class First, class... Args>
+    Pattern(AssociatedType av, First firstToken, Args... rest)
+    : root(new Token(firstToken)), assocValue(av)
     {
-        // stop when (a) curr isLeaf and (b) stack is empty and (c) curr char != end
-        // (a ^ b) = ~(~a | ~b) = A; ~A = (~a | ~b) = curr is not Leaf or stack is not empty
+        root->setSiblings(rest...);
+    }
+    
+    bool matches(std::string::const_iterator bg, std::string::const_iterator end)
+    {
         Token *curr = root;
         std::string::const_iterator curr_char = bg;
         NestingStack stack;
-        /*
-        is Normal?
-            applies?
-                curr token = curr_token.next, increment curr char
-            else
-                !stack.handle()? return false
-        is Group?
-            stack.add(currtoken, ...), curr_token = curr_token.inner, DON'T increment curr char
+        
+        // a = curr is nullptr; b = currChar is end
+        // stop when a|b. continue while ~a^~b
+        while(curr != nullptr && curr_char != end)
+        {
+            if (curr->isGroup())
+            {
+                stack.addLevel(curr, curr_char);
+                curr = curr->getChild();
+                continue;
+            }
 
-        is Leaf?
-            top is opt1?
-                curr_token = stack.getTop().getToken() + 2, increment curr char
-            else, top is full?
-                curr_token = stack.getTop().getToken() + 1, stack.pop(), increment curr char
-            else
-                count++, curr_token = stack.getTop().getToken() + 1, increment curr char
-        */
+            // if control reaches this point, then curr is Normal
+            if (!curr->appliesFor(*curr_char))
+                if (stack.handle(curr, curr_char)) continue; else return false;
+
+            // if control reaches this point then curr applies
+            if (!curr->isLeaf())
+                curr = curr->getNext();
+            else if (stack.topIsOpt1())
+                curr = stack.topToken()->getNext()->getNext();
+            else if (stack.topIsFull())
+                curr = stack.topToken()->getNext();
+            else if (stack.isEmpty())
+                curr = curr->getNext();
+            else { // if stack is not empty, full or opt1 and curr is leaf 
+                // Traverse top Nesting Level again
+                curr = stack.topToken()->getChild();
+                stack.incrementCount();
+            }  
+            curr_char++; 
+        }
+
+        // if ran out of characters before finishing test
+        if (curr_char == end && curr != nullptr)
+            return false;
 
         return true;
     }
