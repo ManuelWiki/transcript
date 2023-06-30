@@ -13,12 +13,10 @@ class Token {
     Token *child = nullptr;
     Token *next = nullptr;
 
-    friend Token OneOrMore();
-    friend Token NToken(unsigned);
-    friend Token ZeroOrMore();
-    friend Token Optional();
-    friend Token Option1();
-    friend Token Option2();
+    template <class... Args>
+    friend Token *NToken(unsigned, Args...);
+    template <class... Args>
+    friend Token *GroupToken(TokenType, Args...);
 
     Token (TokenType t, unsigned n = 0)
     :type(t), number(n)
@@ -94,28 +92,21 @@ void Token::setSiblings(First first, Args... rest)
 }
 void Token::setSiblings() {}
 
-Token OneOrMore(); /* (+) */
-Token NToken(unsigned n)
-{
-    return Token(TokenType::N, n);
-}
-Token ZeroOrMore() /* (*) */
-{
-    return Token(TokenType::ZeroOrMore); 
-}
-Token Optional() /* (?) */
-{
-    return Token(TokenType::Optional); 
-}
-Token Option1()
-{
-    return Token(TokenType::Opt1);
-}
-Token Option2()
-{
-    return Token(TokenType::Opt2);
-}
 
+template <class... Args>
+Token *NToken(unsigned n, Args... siblings)
+{
+    Token *root = new Token(TokenType::N, n);
+    root->setChildren(siblings...);
+    return root;
+}
+template <class... Args>
+Token *GroupToken(TokenType type, Args... siblings) /* (+) */
+{
+    Token *root = new Token(type);
+    root->setChildren(siblings...);
+    return root;
+}
 
 template <class AssociatedType>
 class Pattern {
@@ -140,7 +131,21 @@ class Pattern {
 
         void incrementCount() { count++; }
 
-        bool isFull() { return count == token->getNumber(); }
+        bool isFull() const
+        {
+            // Token is not full if: token is (+), if token is (*) or if token.number > count
+            return !(token->isOneOrMore() || token->isZeroOrMore() || count < token->getNumber()); 
+        }
+
+        bool isSatisfied() const
+        {
+            return token->isZeroOrMore() // if it's (*) or (?), it's satisfied
+                || token->isOptional()
+                || token->isN() && count == token->getNumber() // if it's N and count == getNumber(), it is satisfied too
+                || !token->isN() && count > 0; // if it's Opt1, Opt2 or (+), and count > 0, it's satisfied
+        }
+
+        bool isLastSibling() const { return token->getNext() == nullptr; }
     };
 
     class NestingStack {
@@ -184,16 +189,13 @@ class Pattern {
             // todo: I think I should free the memory occupied by top's last value
         }
 
-        bool topIsOpt1() 
-        {
-            if (top == nullptr) return false; 
-            return top->getToken()->isOpt1();
-        }
-        bool topIsFull()
-        {
-            if (top == nullptr) return false;
-            return top->getToken()->getNumber() == top->getCount();
-        }
+        bool topIsOpt1() const { return top != nullptr && top->getToken()->isOpt1(); }
+        
+        bool topIsFull() const { return top != nullptr && top->isFull(); }
+
+        bool topIsSatisfied() const { return top != nullptr && top->isSatisfied(); }
+
+        bool topIsLastSibling() const { return top != nullptr && top->isLastSibling(); }
 
         Token *topToken() { return top->getToken(); }
 
@@ -246,10 +248,9 @@ public:
             curr_char++; 
         }
 
-        // if ran out of characters before finishing test
-        if (curr_char == end && curr != nullptr)
-            return false;
-
-        return true;
+        return curr_char != end     // in case we finish the test before running out of characters
+            || curr == nullptr      // in case we finished the test after the last character
+            || (stack.topIsSatisfied() && stack.topIsLastSibling());  
+            // in case we ran out of characters but stack.top is satisfied and stack.top is last sibling
     }
 };
